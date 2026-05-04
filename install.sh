@@ -16,12 +16,20 @@
 set -euo pipefail
 
 # ---------- constants ----------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-SKILLS_SRC="$SCRIPT_DIR/skills"
+# When run from a checked-out repo, BASH_SOURCE[0] points at this file.
+# When run via `curl | bash`, BASH_SOURCE[0] is empty and $0 is "bash" — we
+# detect that case below and fetch SKILL.md files from REPO_RAW into a tmpdir.
+_self="${BASH_SOURCE[0]:-}"
+if [[ -n "$_self" && -f "$_self" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "$_self")" && pwd)"
+else
+  SCRIPT_DIR=""
+fi
 SKILLS_DST="$HOME/.claude/skills"
 SKILL_NAMES=(save load log)
 PLACEHOLDER='__HISTORY_DIR__'
 DEFAULT_HISTORY_DIR="$HOME/.claude-savepoint/history"
+REPO_RAW="${SAVEPOINT_REPO_RAW:-https://raw.githubusercontent.com/timulys/claude-savepoint/main}"
 
 # ---------- ui helpers ----------
 c_reset=$'\033[0m'; c_bold=$'\033[1m'; c_dim=$'\033[2m'
@@ -50,11 +58,27 @@ done
 # Env var overrides if CLI flag absent.
 HISTORY_DIR="${HISTORY_DIR:-${SAVEPOINT_HISTORY_DIR:-}}"
 
-# ---------- pre-flight ----------
-[[ -d "$SKILLS_SRC" ]] || die "skills source not found: $SKILLS_SRC (are you running from the repo root?)"
-for n in "${SKILL_NAMES[@]}"; do
-  [[ -f "$SKILLS_SRC/$n/SKILL.md" ]] || die "missing skill source: $SKILLS_SRC/$n/SKILL.md"
-done
+# ---------- locate skill sources ----------
+# Prefer local skills/ next to the script (git clone case). Fall back to
+# fetching from REPO_RAW into a tmpdir (curl|bash case).
+if [[ -n "$SCRIPT_DIR" && -d "$SCRIPT_DIR/skills" ]]; then
+  SKILLS_SRC="$SCRIPT_DIR/skills"
+  for n in "${SKILL_NAMES[@]}"; do
+    [[ -f "$SKILLS_SRC/$n/SKILL.md" ]] || die "missing skill source: $SKILLS_SRC/$n/SKILL.md"
+  done
+else
+  command -v curl >/dev/null 2>&1 || die "curl not found (needed for remote install)"
+  TMPDIR_FETCH="$(mktemp -d 2>/dev/null || mktemp -d -t savepoint)"
+  trap 'rm -rf "$TMPDIR_FETCH"' EXIT
+  info "fetching skills from $REPO_RAW"
+  for n in "${SKILL_NAMES[@]}"; do
+    mkdir -p "$TMPDIR_FETCH/skills/$n"
+    if ! curl -fsSL "$REPO_RAW/skills/$n/SKILL.md" -o "$TMPDIR_FETCH/skills/$n/SKILL.md"; then
+      die "failed to fetch skills/$n/SKILL.md from $REPO_RAW"
+    fi
+  done
+  SKILLS_SRC="$TMPDIR_FETCH/skills"
+fi
 
 # Detect non-interactive (piped) execution. If no path supplied AND no tty, fall back to default.
 if [[ -z "$HISTORY_DIR" ]]; then
