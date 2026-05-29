@@ -1,0 +1,46 @@
+skills/load/SKILL.md
+  280c4fcd14f0f0e1 3,6,8,10,12,14,16-19,21-39,41,44,87,89,91-96,98,103-107
+README.md
+  280c4fcd14f0f0e1 7,65,70,78-84
+---
+{
+  "schema_version": "zax-attestation/1.1.0",
+  "base_commit_sha": "26f056a4ec8acd3fece84667acd81c235673eab2",
+  "prompts": {
+    "280c4fcd14f0f0e1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "181813bc-2a77-4848-b984-d4d7e5f45c68",
+        "model": "claude-opus-4-8"
+      },
+      "skills": [
+        {
+          "id": "load",
+          "ts": "2026-05-29T08:57:26.765Z"
+        },
+        {
+          "id": "effort",
+          "ts": "2026-05-29T08:57:56.843Z"
+        },
+        {
+          "id": "save",
+          "ts": "2026-05-29T09:06:38.869Z"
+        }
+      ],
+      "tool_counts": {
+        "Skill": 2,
+        "Read": 7,
+        "Bash": 16,
+        "ToolSearch": 1,
+        "mcp__claude_ai_Slack__slack_read_thread": 1,
+        "Agent": 1,
+        "Write": 4,
+        "Edit": 4,
+        "AskUserQuestion": 2
+      },
+      "total_additions": 58,
+      "total_deletions": 0,
+      "overriden_lines": 0
+    }
+  }
+}
