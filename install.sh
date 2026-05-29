@@ -163,6 +163,12 @@ for name in "${SKILL_NAMES[@]}"; do
   ok "installed /$name → $dst"
 done
 
+# ---------- record config for updates ----------
+# Persist the chosen history dir so update.sh can re-install without re-prompting
+# (and without changing where history already lives). %q keeps it shell-safe.
+printf 'SAVEPOINT_HISTORY_DIR=%q\n' "$HISTORY_DIR" > "$SKILLS_DST/.savepoint.env"
+ok "recorded config → $SKILLS_DST/.savepoint.env"
+
 # ---------- done ----------
 printf "\n%s✓ claude-savepoint installed%s\n" "$c_green" "$c_reset"
 printf "  history dir : %s\n" "$HISTORY_DIR"

@@ -13,8 +13,8 @@ description: Save the current work session state (last completed step, pending r
 
 저장 파일:
 1. **`HISTORY-{YYYY-MM-DD-HHmm}.md`** — 새 스냅샷 (매 호출마다 새 파일)
-2. **`LATEST.md`** — 가장 최근 저장본 사본 (덮어쓰기). `/load`가 우선 참조
-3. **`INDEX.md`** — 모든 저장 이력의 한 줄 인덱스 (append)
+2. **`LATEST.md`** — 가장 최근 저장본 사본 (덮어쓰기). `/load latest` 단축 경로용
+3. **`INDEX.md`** — 모든 저장 이력의 한 줄 인덱스 (append). `/load`·`/log`가 목록으로 읽음
 
 ## 저장 절차
 

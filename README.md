@@ -38,6 +38,24 @@ Claude Code를 어떤 디렉토리에서든 열고 `/save`를 입력하면 됩�
 
 ---
 
+## 업데이트
+
+이미 설치된 상태에서 최신 버전으로 올리려면 (history 폴더와 그 안의 파일은 그대로 보존됩니다):
+
+```bash
+# clone 받아둔 경우
+cd claude-savepoint && git pull && ./update.sh
+
+# clone 없이 어디서든 (다운로드 후 실행 — 파이프-투-셸은 일부러 피합니다)
+curl -fsSL https://raw.githubusercontent.com/timulys/claude-savepoint/main/update.sh -o /tmp/savepoint-update.sh && bash /tmp/savepoint-update.sh
+```
+
+`update.sh`는 설치 때 기록해둔 history 경로를 그대로 재사용해 `--force`로 최신 스킬을 다시 깔아줍니다. 경로 해석 우선순위는 ① `~/.claude/skills/.savepoint.env` → ② 설치된 `save/SKILL.md`에서 추출 → ③ 기본값(`~/.claude-savepoint/history`)입니다. 기존 SKILL.md는 `SKILL.md.bak.<timestamp>`로 자동 백업됩니다.
+
+> **업데이트 후 새 Claude Code 세션부터 적용**됩니다. 이미 열려 있는 세션은 새로 열어주세요.
+
+---
+
 ## 무엇이 설치되나
 
 ```
