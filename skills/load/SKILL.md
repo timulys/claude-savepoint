@@ -1,28 +1,47 @@
 ---
 name: load
-description: Load the most recent saved session state from the session history folder (LATEST.md) and present a summary so the user can immediately resume work. Use when user types /load or asks to resume previous session.
+description: Show the 10 most recent saved sessions from the session history folder (INDEX.md) and let the user pick one to load, then present its summary so the user can immediately resume work. Use when user types /load or asks to resume a previous session.
 ---
 
-# /load — 직전 세션 상태 불러오기
+# /load — 저장된 세션 선택해서 불러오기
 
-사용자가 `/load`를 호출하면 history 폴더의 `LATEST.md`(또는 지정된 파일)를 읽어 **이전 세션의 진행 상태를 요약**해 보여주고, 사용자가 바로 작업을 이어갈 수 있게 합니다.
+사용자가 `/load`를 호출하면 history 폴더의 **`INDEX.md`에서 최근 세션 10개를 목록으로 보여주고**, 사용자가 그중 하나를 골라 **이전 세션의 진행 상태를 요약**받아 바로 이어갈 수 있게 합니다.
 
-## 기본 동작
+> **왜 LATEST.md 단독이 아니라 목록 선택인가**: 여러 세션을 병렬로 돌리면 `/save` 때마다 `LATEST.md`가 마지막 저장본으로 덮어써진다. 그래서 "최신 1개만 자동 로드"하면 직전에 저장한 다른 세션이 묻힌다. `INDEX.md`는 모든 저장본을 최신순으로 누적하므로(덮어쓰기가 아니라 append), 이걸 목록으로 보여주고 사용자가 고르게 한다.
 
-### Step 1. 파일 읽기
+## 기본 동작 (`/load` — 인수 없음)
 
-기본 경로: `__HISTORY_DIR__/LATEST.md`
+### Step 1. 최근 10개 목록 제시 후 선택 대기
 
-- `LATEST.md`가 존재하면 그것을 `Read`로 읽음
-- 없으면 `INDEX.md`에서 최상단 항목 파일을 대신 읽음
-- 둘 다 없으면 "저장된 세션 없음. 먼저 `/save`로 저장하세요." 안내
-
-### Step 2. 사용자 친화적 요약 제시
-
-읽은 history 파일에서 다음 4가지를 추출해 **간결하게** 보여줍니다 (전체 본문을 그대로 출력 ❌):
+1. `__HISTORY_DIR__/INDEX.md`를 `Read`로 읽는다.
+2. 표의 **상단(=최신) 10개 행**을 추출한다 (10개 미만이면 있는 만큼).
+   - INDEX.md가 없거나 행이 0개면 → "저장된 세션 없음. 먼저 `/save`로 저장하세요." 안내하고 종료.
+3. 다음 형식으로 **번호 목록**을 출력한다 (본문 전체 ❌, 한눈에 구분되게):
 
 ```markdown
-📂 마지막 세션 불러옴 ({저장 일시})
+📂 저장된 세션 — 최근 10개 (번호로 선택)
+
+ 1. (최신) 2026-05-29 18:07 · B2C-50960 채팅방 생성 API
+     → 분석 파악 완료 — Conan 협의 + M-1~M-4 구현 대기
+ 2.        2026-05-29 18:06 · zax task 스킬 개편 (claude -p 없이 멀티 repo 병렬)
+     → Slack 스레드 파악 + CLI 토대 5건 실측 검증 완료 → PoC 직전
+ 3.        2026-05-29 12:20 · B2C-50212 원오빌 통합광고
+     → B2C-50960 7-layer 광범위 분석 + 5/29 회의 D-35~D-38 박제
+ … (최대 10개)
+
+몇 번 세션을 불러올까요? 번호만 입력하세요 (생략/Enter 시 1번 = 최신).
+```
+
+4. **여기서 멈추고 사용자의 번호 입력을 기다린다.** (목록만 띄우고 턴 종료 — 임의로 1번을 자동 로드하지 말 것. 단, 사용자가 처음부터 `/load latest`로 불렀으면 1번을 바로 로드.)
+
+> 후보가 정확히 2~4개뿐이면 `AskUserQuestion`으로 클릭 선택 UI를 써도 된다. 5개 이상이면 위 번호 목록 + 자유 입력 방식을 쓴다 (AskUserQuestion은 옵션 4개 제한).
+
+### Step 2. 선택한 세션 로드 + 요약 제시
+
+사용자가 번호(예: `2`)를 입력하면, 그 행의 `HISTORY-*.md` 파일을 `Read`로 읽고 다음 4가지를 **간결하게** 요약한다 (전체 본문 그대로 출력 ❌):
+
+```markdown
+📂 {N}번 세션 불러옴 ({저장 일시})
 
 🎯 **그때까지 한 일**: {한 줄 요약}
 
@@ -65,20 +84,24 @@ description: Load the most recent saved session state from the session history f
 - C. 환경 점검만 하고 잠시 대기
 ```
 
-## 파일 지정 모드
+## 인수 모드 (목록 건너뛰기)
 
-사용자: `/load 2026-04-29`
-→ `__HISTORY_DIR__/HISTORY-2026-04-29-*.md` 패턴 매칭. 여러 개면 그 날짜 중 가장 최근.
+목록을 거치지 않고 바로 특정 세션을 로드하는 단축 경로:
 
-사용자: `/load HISTORY-2026-04-29-1530`
-→ 정확한 파일명으로 로드.
+| 입력 | 동작 |
+|---|---|
+| `/load latest` 또는 `/load 최신` | INDEX 최상단(최신) 세션을 바로 로드 (Step 2부터) |
+| `/load 2026-04-29` | `__HISTORY_DIR__/HISTORY-2026-04-29-*.md` 패턴 매칭. 여러 개면 그 날짜 중 가장 최근 |
+| `/load HISTORY-2026-04-29-1530` | 정확한 파일명으로 바로 로드 |
+| `/load list` 또는 `/load all` | `/log`로 위임 (전체 이력 보기) |
 
-사용자: `/load list`
-→ `/log`로 위임.
+> 목록 제시(Step 1) 후 사용자가 번호 대신 날짜·파일명을 말해도 동일하게 해석한다.
 
 ## 주의사항
 
 - **History 본문 전체를 그대로 출력하지 말 것.** 사용자가 보고 싶은 건 "어디서부터 이어갈지"지 옛 기록 전부가 아님.
-- History에 명시된 파일 경로가 실제로 존재하는지 검증 (없어졌으면 알림)
-- 백그라운드 프로세스가 history 시점과 다르면 명확히 보고 (`Discovery Server는 종료된 상태`)
-- 사용자가 "/load 후 바로 시작" 의도면 다음 도구 호출까지 자동으로 (단, 위험한 작업이면 확인)
+- **목록만 띄우고 임의로 1번을 자동 로드하지 말 것.** 사용자가 고르게 한다 (`/load latest`로 명시한 경우만 예외).
+- 선택한 history에 명시된 파일 경로가 실제로 존재하는지 검증 (없어졌으면 알림).
+- INDEX 행의 `HISTORY-*.md` 파일이 실제로 없으면 그 행을 건너뛰거나 사용자에게 알림.
+- 백그라운드 프로세스가 history 시점과 다르면 명확히 보고 (`Discovery Server는 종료된 상태`).
+- 사용자가 "/load 후 바로 시작" 의도면 다음 도구 호출까지 자동으로 (단, 위험한 작업이면 확인).
